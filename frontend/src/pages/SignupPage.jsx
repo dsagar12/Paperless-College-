@@ -16,6 +16,8 @@ const SignupPage = () => {
     facultyId: "",
     department: "",
     contactNumber: "",
+    adminUsername: "",
+    adminPassword: "",
   });
 
   const [error, setError] = useState("");
@@ -48,19 +50,28 @@ const SignupPage = () => {
     e.preventDefault();
     setError("");
     setIsLoading(true);
-  
+
     try {
+      if (formData.role === "admin") {
+        if (formData.adminUsername === "admin" && formData.adminPassword === "admin123") {
+          navigate("/admin-dashboard");
+          return;
+        } else {
+          throw new Error("Invalid Admin credentials");
+        }
+      }
+
       if (!validateEmail(formData.email, formData.role)) {
         throw new Error(`Invalid email format for ${formData.role}`);
       }
-  
+
       const userCredential = await createUserWithEmailAndPassword(
         auth,
         formData.email,
         formData.password
       );
       const user = userCredential.user;
-  
+
       const userData = {
         uid: user.uid,
         fullName: formData.fullName,
@@ -68,7 +79,7 @@ const SignupPage = () => {
         role: formData.role,
         contactNumber: formData.contactNumber,
       };
-  
+
       if (formData.role === "student") {
         userData.studentId = formData.studentId;
         userData.department = formData.department;
@@ -76,19 +87,16 @@ const SignupPage = () => {
         userData.facultyId = formData.facultyId;
         userData.department = formData.department;
       }
-  
+
       await setDoc(doc(collection(db, "users"), user.uid), userData);
-  
-      // Redirect based on role
+
       navigate(`/${formData.role}-dashboard`);
-  
     } catch (err) {
       setError(err.message);
     } finally {
       setIsLoading(false);
     }
   };
-  
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 to-blue-900 flex items-center justify-center p-4">
@@ -103,65 +111,13 @@ const SignupPage = () => {
         {error && <div className="mb-4 p-3 bg-red-500/20 text-red-300 rounded-lg">⚠️ {error}</div>}
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Full Name */}
-          <div>
-            <label className="block text-white/80">Full Name</label>
-            <input
-              type="text"
-              value={formData.fullName}
-              onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-              required
-              className="w-full p-3 bg-white/5 border border-white/20 rounded-lg text-white"
-            />
-          </div>
-
-          {/* College Email */}
-          <div>
-            <label className="block text-white/80">College Email</label>
-            <input
-              type="email"
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              required
-              className="w-full p-3 bg-white/5 border border-white/20 rounded-lg text-white"
-            />
-          </div>
-
-          {/* Password */}
-          <div>
-            <label className="block text-white/80">Password</label>
-            <input
-              type="password"
-              value={formData.password}
-              onChange={(e) => {
-                setFormData({ ...formData, password: e.target.value });
-                checkPasswordStrength(e.target.value);
-              }}
-              required
-              className="w-full p-3 bg-white/5 border border-white/20 rounded-lg text-white"
-            />
-            <div className="mt-1 text-xs text-gray-300">
-              Strength:{" "}
-              <span
-                className={
-                  passwordStrength < 2
-                    ? "text-red-400"
-                    : passwordStrength < 3
-                    ? "text-yellow-400"
-                    : "text-green-400"
-                }
-              >
-                {["Weak", "Moderate", "Strong", "Very Strong"][passwordStrength]}
-              </span>
-            </div>
-          </div>
-
           {/* Role Selection */}
           <div className="flex flex-wrap gap-3">
             {[
               { id: "student", name: "Student" },
               { id: "faculty", name: "Faculty" },
               { id: "doctor", name: "Doctor" },
+              { id: "admin", name: "Admin" },
             ].map((role) => (
               <label
                 key={role.id}
@@ -184,20 +140,91 @@ const SignupPage = () => {
             ))}
           </div>
 
-          {/* Submit Button */}
-          <button type="submit" className="w-full bg-blue-500 text-white py-3 rounded-lg">
-            {isLoading ? "Signing up..." : "Sign Up"}
-          </button>
+          {/* Conditional Fields */}
+          {formData.role === "admin" ? (
+            <>
+              {/* Admin Username */}
+              <div>
+                <label className="block text-white/80">Admin Username</label>
+                <input
+                  type="text"
+                  value={formData.adminUsername}
+                  onChange={(e) => setFormData({ ...formData, adminUsername: e.target.value })}
+                  required
+                  className="w-full p-3 bg-white/5 border border-white/20 rounded-lg text-white"
+                />
+              </div>
 
+              {/* Admin Password */}
+              <div>
+                <label className="block text-white/80">Admin Password</label>
+                <input
+                  type="password"
+                  value={formData.adminPassword}
+                  onChange={(e) => setFormData({ ...formData, adminPassword: e.target.value })}
+                  required
+                  className="w-full p-3 bg-white/5 border border-white/20 rounded-lg text-white"
+                />
+              </div>
+            </>
+          ) : (
+            <>
+              {/* Full Name */}
+              <div>
+                <label className="block text-white/80">Full Name</label>
+                <input
+                  type="text"
+                  value={formData.fullName}
+                  onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                  required
+                  className="w-full p-3 bg-white/5 border border-white/20 rounded-lg text-white"
+                />
+              </div>
+
+              {/* College Email */}
+              <div>
+                <label className="block text-white/80">College Email</label>
+                <input
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  required
+                  className="w-full p-3 bg-white/5 border border-white/20 rounded-lg text-white"
+                />
+              </div>
+
+              {/* Password */}
+              <div>
+                <label className="block text-white/80">Password</label>
+                <input
+                  type="password"
+                  value={formData.password}
+                  onChange={(e) => {
+                    setFormData({ ...formData, password: e.target.value });
+                    checkPasswordStrength(e.target.value);
+                  }}
+                  required
+                  className="w-full p-3 bg-white/5 border border-white/20 rounded-lg text-white"
+                />
+              </div>
+            </>
+          )}
+
+<button type="submit" className="w-full bg-blue-500 text-white py-3 rounded-lg">
+  {isLoading ? "Processing..." : formData.role === "admin" ? "Log In" : "Sign Up"}
+</button>
+
+           {/* 🔹 Login Option */}
+           <p className="text-center text-white/80 mt-4">
+            Already have an account?{" "}
+            <span
+              onClick={() => navigate("/login")}
+              className="text-blue-400 cursor-pointer hover:underline"
+            >
+              Log in
+            </span>
+          </p>
         </form>
-        <div>
-        <p className="text-center text-white/60 mt-4">
-        Already have an account?{" "}
-        <button onClick={() => navigate("/login")} className="text-blue-400 hover:underline">
-          Login
-        </button>
-      </p>
-        </div>
       </motion.div>
     </div>
   );
